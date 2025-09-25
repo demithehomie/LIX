@@ -137,6 +137,19 @@ class LicitacaoService:
         except Exception as e:
             print(f"Erro ao buscar dados do PNCP: {str(e)}")
             return {"data": [], "totalElements": 0}
+
+    async def listar_orgaos_pncp(self, pagina: int = 1, tamanho_pagina: int = 50):
+        url = f"{self.pncp_base_url}/orgaos"
+        params = {"pagina": pagina, "tamanhoPagina": tamanho_pagina}
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params=params)
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Erro ao buscar órgãos PNCP: {response.status_code}")
+                return {"data": [], "totalElements": 0}
     
     async def buscar_licitacoes_transparencia(
         self,
@@ -607,17 +620,18 @@ async def root():
     return {
         "message": "API de Licitações - Bem-vindo!",
         "version": "1.0.0",
-    endpoints = {
-        "licitacoes_mock": "/licitacoes",
-        "licitacoes_pncp": "/licitacoes/pncp",
-        "licitacoes_transparencia": "/licitacoes/transparencia", 
-        "licitacoes_consolidado": "/licitacoes/consolidado",
-        "tipos": "/tipos",
-        "status": "/status",
-        "ufs": "/ufs",
-        "documentacao": "/docs"
+        "endpoints": {
+            "licitacoes_mock": "/licitacoes",
+            "licitacoes_pncp": "/licitacoes/pncp",
+            "licitacoes_transparencia": "/licitacoes/transparencia", 
+            "licitacoes_consolidado": "/licitacoes/consolidado",
+            "tipos": "/tipos",
+            "status": "/status",
+            "ufs": "/ufs",
+            "documentacao": "/docs"
+        }
     }
-    }
+
 
 @app.get("/licitacoes", response_model=Dict[str, Any])
 async def obter_licitacoes(
@@ -709,6 +723,27 @@ async def obter_licitacoes(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+async def listar_orgaos_pncp(self, pagina: int = 1, tamanho_pagina: int = 50):
+    url = f"{self.pncp_base_url}/orgaos"
+    params = {"pagina": pagina, "tamanhoPagina": tamanho_pagina}
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, params=params)
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Erro ao buscar órgãos PNCP: {response.status_code}")
+            return {"data": [], "totalElements": 0}
+
+@app.get("/orgaos/pncp")
+async def obter_orgaos_pncp(
+    pagina: int = Query(1, ge=1, description="Página"),
+    tamanho_pagina: int = Query(50, ge=1, le=500, description="Tamanho da página")
+):
+    return await licitacao_service.listar_orgaos_pncp(pagina=pagina, tamanho_pagina=tamanho_pagina)
+
 
 @app.get("/licitacoes/{licitacao_id}", response_model=LicitacaoResponse)
 async def obter_licitacao_por_id(licitacao_id: int):
